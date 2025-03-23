@@ -1,16 +1,36 @@
-FROM ruby:3.3.6
-ENV LANG C.UTF-8
-ENV TZ Asia/Tokyo
-RUN apt-get update -qq \
-&& apt-get install -y ca-certificates curl gnupg \
-&& mkdir -p /etc/apt/keyrings \
-&& curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
-&& NODE_MAJOR=20 \
-&& echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
-&& wget --quiet -O - /tmp/pubkey.gpg https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
-&& echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
-RUN apt-get update -qq && apt-get install -y build-essential libssl-dev nodejs yarn vim
-RUN mkdir /myapp
-WORKDIR /myapp
-RUN gem install bundler
-COPY . /myapp
+FROM docker.io/library/ruby:3.3.6-slim
+
+WORKDIR /rails
+
+# Install base packages
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y curl default-mysql-client libjemalloc2 libvips \
+    build-essential default-libmysqlclient-dev git node-gyp pkg-config python-is-python3 && \
+    rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+# Install Node.js and Yarn
+ARG NODE_VERSION=20.19.0
+ARG YARN_VERSION=1.22.22
+ENV PATH=/usr/local/node/bin:$PATH
+RUN curl -sL https://github.com/nodenv/node-build/archive/master.tar.gz | tar xz -C /tmp/ && \
+    /tmp/node-build-master/bin/node-build "${NODE_VERSION}" /usr/local/node && \
+    npm install -g yarn@$YARN_VERSION && \
+    rm -rf /tmp/node-build-master
+
+# Set development environment
+ENV RAILS_ENV=development
+
+# Install application gems
+COPY Gemfile Gemfile.lock ./
+RUN bundle install
+
+# Install node modules
+COPY package.json yarn.lock ./
+RUN yarn install
+
+# Copy application code
+COPY . .
+
+# Start the server by default
+EXPOSE 3000
+CMD ["./bin/dev"]
