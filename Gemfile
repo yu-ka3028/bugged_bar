@@ -58,4 +58,4 @@ group :test do
   gem "selenium-webdriver"
 end
 
-gem 'rubyzip', '~> 2.3.0'
+gem 'rubyzip', '~> 2.4.1'
