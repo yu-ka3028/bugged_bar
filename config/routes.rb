@@ -11,6 +11,7 @@ Rails.application.routes.draw do
 
   # Defines the root path route ("/")
   # root "posts#index"
-  root "top#index"
+  root 'top#index'
   resources :drinks, only: [:new, :create, :index, :show]
+  delete 'drinks' => 'drinks#destroy'
 end
